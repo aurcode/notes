@@ -1,5 +1,5 @@
 - [Cluster](#cluster)
-    - [Create fake data](#create-fake-data)
+  - [Create fake data](#create-fake-data)
     - [Plot](#plot)
     - [Split data and train](#split-data-and-train)
     - [Clustering basic](#clustering-basic)
@@ -15,11 +15,11 @@
   - [PCA](#pca)
     - [StandardScaler](#standardscaler)
     - [PCA implementation](#pca-implementation)
-
+  - [Logistic Regression](#logistic-regression)
 
 # Cluster
 
-### Create fake data
+## Create fake data
 
 <details>
   <summary>Make blobs</summary>
@@ -127,12 +127,49 @@ axs[1].set_title(f'Kmeans {axs[1].get_title()}')
 
 ## Clustering with KMeans / K-Means
 ```python
-from sklearn.linear_model import LogisticRegression
+kmeans = KMeans(n_clusters=4)
+df_cluster = kmeans.fit_predict(X)
+df_blobs['cluster'] = df_cluster
+k_means_centers = kmeans.cluster_centers_
+df_k_means_center = pd.DataFrame(
+    {
+        'x1':k_means_centers[:,0],
+        'x2':k_means_centers[:,1]
+
+    }
+)
 ```
 
 ```python
-logistic_reg = LogisticRegression()
-logistic_reg.fit(x_train,y_train)
+fig = plt.figure(figsize=(9,9))
+sns.scatterplot(data=df_blobs,  x='x1', y='x2', hue= 'cluster', palette='coolwarm')
+sns.scatterplot(data=df_centers,  x='x1', y='x2', marker='X', s=150 , color='red')
+sns.scatterplot(data=df_k_means_center,  x='x1', y='x2', marker='o', s=150 , color='yellow')
+plt.show()
+```
+
+```python
+def vis_cluster(k):
+    kmeans = KMeans(n_clusters=k)
+    df_cluster = kmeans.fit_predict(X)
+    df_blobs['cluster'] = df_cluster
+    k_means_centers = kmeans.cluster_centers_
+    df_k_means_center = pd.DataFrame(
+        {
+            'x1':k_means_centers[:,0],
+            'x2':k_means_centers[:,1]
+
+        }
+    )
+    fig = plt.figure(figsize=(9,9))
+    sns.scatterplot(data=df_blobs,  x='x1', y='x2', hue= 'cluster', palette='coolwarm')
+    sns.scatterplot(data=df_centers,  x='x1', y='x2', marker='X', s=150 , color='red')
+    sns.scatterplot(data=df_k_means_center,  x='x1', y='x2', marker='o', s=150 , color='yellow')
+    plt.show()
+
+for _ in range(3,7):
+    print(_)
+    vis_cluster(_)
 ```
 
 <details>
@@ -150,7 +187,7 @@ for _ in K:
 ```
 
 Inertia
-```
+```python
 fig = plt.figure(figsize=(8,8))
 plt.plot(K, Sum_of_squared_distances, 'bx-')
 plt.xlabel('K')
@@ -159,7 +196,7 @@ plt.show()
 ```
 
 Silhoutte score
-```
+```python
 fig = plt.figure(figsize=(8,8))
 plt.plot(K, silhouette_scores, 'rx-')
 plt.xlabel('K')
@@ -170,17 +207,16 @@ plt.show()
 </details>
 
 ### Evaluation
-```
+```python
 predictions = logistic_reg.predict(x_test)
 ```
 
-```
+```python
 from sklearn.metrics import confusion_matrix
 cm = confusion_matrix(y_test,predictions)
-
 ```
 
-```
+```python
 plt.figure(figsize=(9,9))
 sns.heatmap(cm, annot=True, linewidths=.5, square=True, cmap='coolwarm')
 plt.ylabel('actual label')
@@ -319,7 +355,7 @@ plt.show()
 
 ## Clustering with DBSCAN
 
-```
+```python
 from sklearn.cluster import DBSCAN
 
 dbscan_cluster = DBSCAN(eps=0.3, min_samples=3)
@@ -519,4 +555,14 @@ Depends of situation I can delete columns
 ```python
 pca_data_standard = pd.DataFrame(pca_data_scaled)
 pca_data_standard.drop([4,5,6,7,8],axis=1, inplace=True)
+```
+
+## Logistic Regression
+```python
+from sklearn.linear_model import LogisticRegression
+```
+
+```python
+logistic_reg = LogisticRegression()
+logistic_reg.fit(x_train,y_train)
 ```
