@@ -4,18 +4,15 @@
     - [Split data and train](#split-data-and-train)
     - [Clustering basic](#clustering-basic)
   - [Clustering with KMeans / K-Means](#clustering-with-kmeans--k-means)
-    - [Evaluation](#evaluation)
+    - [Hyperparameters](#hyperparameters)
   - [Clustering with Hierarchical Clustering](#clustering-with-hierarchical-clustering)
     - [Plot Dedogram](#plot-dedogram)
     - [Basic Create model](#basic-create-model)
-    - [Evaluation](#evaluation-1)
   - [Clustering with DBSCAN](#clustering-with-dbscan)
-    - [Hyperparameters](#hyperparameters)
-    - [Evaluation](#evaluation-2)
-  - [PCA](#pca)
-    - [StandardScaler](#standardscaler)
-    - [PCA implementation](#pca-implementation)
-  - [Logistic Regression](#logistic-regression)
+    - [Hyperparameters](#hyperparameters-1)
+  - [Evaluation](#evaluation)
+    - [Graph](#graph)
+    - [Silhouette Score Visualizer](#silhouette-score-visualizer)
 
 # Cluster
 
@@ -110,6 +107,13 @@ x_train, x_test, y_train, y_test = train_test_split(digits.data, digits.target, 
 ```
 
 ### Clustering basic
+
+
+## Clustering with KMeans / K-Means
+
+<details>
+  <summary>Basic implement</summary>
+
 ```python
 from sklearn.cluster import KMeans
 kmeans = KMeans(n_clusters=5, random_state=7)
@@ -125,28 +129,7 @@ axs[0].set_title(f'Actual {axs[0].get_title()}')
 axs[1].set_title(f'Kmeans {axs[1].get_title()}')
 ```
 
-## Clustering with KMeans / K-Means
-```python
-kmeans = KMeans(n_clusters=4)
-df_cluster = kmeans.fit_predict(X)
-df_blobs['cluster'] = df_cluster
-k_means_centers = kmeans.cluster_centers_
-df_k_means_center = pd.DataFrame(
-    {
-        'x1':k_means_centers[:,0],
-        'x2':k_means_centers[:,1]
-
-    }
-)
-```
-
-```python
-fig = plt.figure(figsize=(9,9))
-sns.scatterplot(data=df_blobs,  x='x1', y='x2', hue= 'cluster', palette='coolwarm')
-sns.scatterplot(data=df_centers,  x='x1', y='x2', marker='X', s=150 , color='red')
-sns.scatterplot(data=df_k_means_center,  x='x1', y='x2', marker='o', s=150 , color='yellow')
-plt.show()
-```
+</details>
 
 ```python
 def vis_cluster(k):
@@ -172,8 +155,10 @@ for _ in range(3,7):
     vis_cluster(_)
 ```
 
+### Hyperparameters
+
 <details>
-  <summary>Metodo del codo</summary>
+  <summary>Elbow Method</summary>
 
   ```python
 Sum_of_squared_distances = []
@@ -206,23 +191,6 @@ plt.show()
 
 </details>
 
-### Evaluation
-```python
-predictions = logistic_reg.predict(x_test)
-```
-
-```python
-from sklearn.metrics import confusion_matrix
-cm = confusion_matrix(y_test,predictions)
-```
-
-```python
-plt.figure(figsize=(9,9))
-sns.heatmap(cm, annot=True, linewidths=.5, square=True, cmap='coolwarm')
-plt.ylabel('actual label')
-plt.xlabel('Predicted label')
-```
-
 ## Clustering with Hierarchical Clustering
 
 ### Plot Dedogram
@@ -246,16 +214,104 @@ hc = AgglomerativeClustering(n_clusters=4, affinity='euclidean', linkage='ward')
 y_hc = hc.fit_predict(X)
 ```
 
-### Evaluation
+## Clustering with DBSCAN
 
+```python
+from sklearn.cluster import DBSCAN
+
+dbscan_cluster = DBSCAN(eps=0.3, min_samples=3)
+y_m_predict = dbscan_cluster.fit_predict(X_m)
+df_moons['cluster'] = y_m_predict
+sns.scatterplot(data=df_moons, x='x1',y='x2', hue='cluster')
+plt.show()
+```
+
+### Hyperparameters
+
+```python
+from sklearn.neighbors import NearestNeighbors
+
+neighbors = NearestNeighbors(n_neighbors=3)
+neighbors_fit = neighbors.fit(X)
+distances, indices = neighbors_fit.kneighbors(X)
+
+distances = np.sort(distances,axis=0)
+distances = distances[:,1]
+fig = plt.figure(figsize=(10,10))
+plt.plot(distances)
+```
+
+```python
+eps_values = np.arange(0.25, 0.8, 0.10)
+min_samples = np.arange(2,10)
+
+from itertools import product
+dbscan_paramns = list(product(eps_values,min_samples))
+no_of_clusters = []
+sil_score = []
+for p in dbscan_paramns:
+    y_dbscan = DBSCAN(eps=p[0], min_samples=p[1]).fit_predict(df_country_scaled)
+    try:
+        sil_score.append(silhouette_score(df_country_scaled,y_dbscan))
+    except:
+        sil_score.append(0)
+    no_of_clusters.append(len(np.unique(y_dbscan)))
+```
+
+```python
+df_param_tunning = pd.DataFrame.from_records(dbscan_paramns, columns=['Eps','Min_samples'])
+df_param_tunning['sil_score'] = sil_score
+df_param_tunning['n_clusters'] = no_of_clusters
+
+pivot_1 = pd.pivot_table(df_param_tunning, values='sil_score', columns='Eps', index='Min_samples')
+pivot_2 = pd.pivot_table(df_param_tunning, values='n_clusters', columns='Eps', index='Min_samples')
+```
+
+```python
+fig, ax = plt.subplots(figsize=(18,6))
+sns.heatmap(pivot_1, annot=True, annot_kws={'size':10}, cmap='coolwarm', ax=ax)
+plt.show()
+```
+
+```python
+fig, ax = plt.subplots(figsize=(18,6))
+sns.heatmap(pivot_2, annot=True, annot_kws={'size':10}, cmap='coolwarm', ax=ax)
+plt.show()
+```
+
+## Evaluation
+
+### Graph
+
+```python
+y_predict = model.fit_predict(X)
+df['cluster'] = y_predict
+
+fig = plt.figure(figsize=(8,8))
+sns.scatterplot(data=df, x='x1', y='x2',hue='cluster')
+plt.plot()
+plt.show()
+```
+
+### Silhouette Score Visualizer
 ```python
 from sklearn.metrics import silhouette_score
 
 silhouette_score(X,y_hc) #basic
 ```
 
+This code only work for KMeans
+```python
+from yellowbrick.cluster import SilhouetteVisualizer
+
+plt.figure(figsize=(15,8))
+km = KMeans(n_clusters=4)
+visualizer = SilhouetteVisualizer(km, colors='yellowbrick')
+visualizer.fit(X)
+```
+
 <details>
-  <summary>Grath Silhouette Score</summary>
+  <summary>Silhouette Score for AgglomerativeClustering</summary>
 
   ```python
 from sklearn.datasets import make_blobs
@@ -349,92 +405,10 @@ for n_clusters in range_n_clusters:
 plt.show()
 ```
 
-[Selecting the number of clusters with silhouette analysis on KMeans clustering](https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis.html)
-
 </details>
 
-## Clustering with DBSCAN
-
-```python
-from sklearn.cluster import DBSCAN
-
-dbscan_cluster = DBSCAN(eps=0.3, min_samples=3)
-y_m_predict = dbscan_cluster.fit_predict(X_m)
-df_moons['cluster'] = y_m_predict
-sns.scatterplot(data=df_moons, x='x1',y='x2', hue='cluster')
-plt.show()
-```
-
-### Hyperparameters
-
-```python
-from sklearn.neighbors import NearestNeighbors
-
-neighbors = NearestNeighbors(n_neighbors=3)
-neighbors_fit = neighbors.fit(X)
-distances, indices = neighbors_fit.kneighbors(X)
-
-distances = np.sort(distances,axis=0)
-distances = distances[:,1]
-fig = plt.figure(figsize=(10,10))
-plt.plot(distances)
-```
-
-```python
-eps_values = np.arange(0.25, 0.8, 0.10)
-min_samples = np.arange(2,10)
-
-from itertools import product
-dbscan_paramns = list(product(eps_values,min_samples))
-no_of_clusters = []
-sil_score = []
-for p in dbscan_paramns:
-    y_dbscan = DBSCAN(eps=p[0], min_samples=p[1]).fit_predict(df_country_scaled)
-    try:
-        sil_score.append(silhouette_score(df_country_scaled,y_dbscan))
-    except:
-        sil_score.append(0)
-    no_of_clusters.append(len(np.unique(y_dbscan)))
-```
-
-```python
-df_param_tunning = pd.DataFrame.from_records(dbscan_paramns, columns=['Eps','Min_samples'])
-df_param_tunning['sil_score'] = sil_score
-df_param_tunning['n_clusters'] = no_of_clusters
-
-pivot_1 = pd.pivot_table(df_param_tunning, values='sil_score', columns='Eps', index='Min_samples')
-pivot_2 = pd.pivot_table(df_param_tunning, values='n_clusters', columns='Eps', index='Min_samples')
-```
-
-```python
-fig, ax = plt.subplots(figsize=(18,6))
-sns.heatmap(pivot_1, annot=True, annot_kws={'size':10}, cmap='coolwarm', ax=ax)
-plt.show()
-```
-
-```python
-fig, ax = plt.subplots(figsize=(18,6))
-sns.heatmap(pivot_2, annot=True, annot_kws={'size':10}, cmap='coolwarm', ax=ax)
-plt.show()
-```
-
-### Evaluation
-
-```python
-dbscan_cluster = DBSCAN(eps=0.5, min_samples=3)
-y_predict = dbscan_cluster.fit_predict(X)
-df_blobs['cluster'] = y_predict
-```
-
-```python
-fig = plt.figure(figsize=(8,8))
-sns.scatterplot(data=df_blobs, x='x1', y='x2',hue='cluster')
-plt.plot()
-plt.show()
-```
-
 <details>
-  <summary>Graph</summary>
+  <summary>Silhouette Score for DBSCAN</summary>
 
   ```python
 from sklearn.datasets import make_blobs
@@ -517,52 +491,5 @@ plt.show()
 
 </details>
 
-## PCA
 
-### StandardScaler
-
-```python
-from sklearn.preprocessing import StandardScaler
-
-scaler = StandardScaler()
-df_scaled = scaler.fit_transform(df)
-```
-
-### PCA implementation
-fff
-**fjdjd**
-
-```python
-from sklearn.decomposition import PCA
-
-pca = PCA()
-pca.fit(df_scaled)
-pca_data_scaled = pca.transform(df_scaled)
-pca_data_scaled
-```
-
-```python
-var = pca.explained_variance_ratio_
-print(var)
-
-cum_var = np.cumsum(np.round(var, decimals=4)*100)
-plt.figure(figsize=(10,10))
-plt.plot(cum_var, 'r-x')
-plt.show()
-```
-
-Depends of situation I can delete columns
-```python
-pca_data_standard = pd.DataFrame(pca_data_scaled)
-pca_data_standard.drop([4,5,6,7,8],axis=1, inplace=True)
-```
-
-## Logistic Regression
-```python
-from sklearn.linear_model import LogisticRegression
-```
-
-```python
-logistic_reg = LogisticRegression()
-logistic_reg.fit(x_train,y_train)
-```
+[Selecting the number of clusters with silhouette analysis on KMeans clustering](https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis.html)
